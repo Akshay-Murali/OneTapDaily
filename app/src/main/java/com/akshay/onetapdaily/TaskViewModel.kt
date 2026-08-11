@@ -26,15 +26,21 @@ class TaskViewModel(
         get() = _tasks
 
     init {
-        loadTasks()
+
+        viewModelScope.launch {
+
+            repository.resetRecurringTasks()
+
+            loadTasks()
+        }
     }
 
     fun loadTasks() {
 
         viewModelScope.launch {
 
-            _tasks.value = repository.getAllTasks()
-
+            _tasks.value =
+                repository.getAllTasks()
         }
     }
 

@@ -8,6 +8,9 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE archived = 0")
     suspend fun getActiveTasks(): List<TaskEntity>
 
+    @Query("SELECT * FROM tasks")
+    suspend fun getAllTasksIncludingArchived(): List<TaskEntity>
+
     @Insert
     suspend fun insertTask(task: TaskEntity)
 

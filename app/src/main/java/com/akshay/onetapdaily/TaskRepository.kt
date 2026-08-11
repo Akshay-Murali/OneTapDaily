@@ -8,6 +8,10 @@ class TaskRepository(
         return taskDao.getActiveTasks()
     }
 
+    suspend fun getAllTasksIncludingArchived(): List<TaskEntity> {
+        return taskDao.getAllTasksIncludingArchived()
+    }
+
     suspend fun insertTask(
         name: String,
         taskType: TaskType,
@@ -39,6 +43,29 @@ class TaskRepository(
         task: TaskEntity
     ) {
         taskDao.deleteTask(task)
+    }
+
+    suspend fun resetRecurringTasks() {
+
+        val tasks =
+            taskDao.getAllTasksIncludingArchived()
+
+        tasks.forEach { task ->
+
+            if (
+                task.taskType == TaskType.RECURRING.name &&
+                task.completed &&
+                System.currentTimeMillis() >= task.nextDueDate
+            ) {
+
+                taskDao.updateTask(
+                    task.copy(
+                        completed = false,
+                        archived = false
+                    )
+                )
+            }
+        }
     }
 
     fun isDue(
