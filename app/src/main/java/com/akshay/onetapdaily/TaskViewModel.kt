@@ -19,6 +19,13 @@ class TaskViewModel(
     private val repository =
         TaskRepository(dao)
 
+    private val settingsRepository =
+        SettingsRepository(
+            (application as OneTapDailyApp)
+                .database
+                .settingsDao()
+        )
+
     private val _tasks =
         MutableStateFlow<List<TaskEntity>>(emptyList())
 
@@ -26,6 +33,16 @@ class TaskViewModel(
         get() = _tasks
 
     init {
+
+        viewModelScope.launch {
+
+            repository.resetRecurringTasks()
+
+            loadTasks()
+        }
+    }
+
+    fun refreshTasks() {
 
         viewModelScope.launch {
 
@@ -43,7 +60,6 @@ class TaskViewModel(
                 repository.getAllTasks()
         }
     }
-
     fun addTask(
         name: String,
         taskType: TaskType,
@@ -92,9 +108,47 @@ class TaskViewModel(
 
                 repository.updateTask(
                     task.copy(
-                        completed = !task.completed
+                        completed = !task.completed,
+                        lastCompletedAt =
+                            if (!task.completed)
+                                System.currentTimeMillis()
+                            else
+                                0
                     )
                 )
+
+                // HABIT STREAK LOGIC
+
+                if (
+                    task.taskType == TaskType.HABIT.name &&
+                    !task.completed
+                ) {
+
+                    val updatedTasks =
+                        repository.getAllTasks()
+
+                    val habitTasks =
+                        updatedTasks.filter {
+                            it.taskType == TaskType.HABIT.name
+                        }
+
+                    val allHabitsDone =
+                        habitTasks.isNotEmpty() &&
+                                habitTasks.all { it.completed }
+
+                    if (allHabitsDone) {
+
+                        val settings =
+                            settingsRepository.getSettings()
+                                ?: SettingsEntity()
+
+                        settingsRepository.saveSettings(
+                            settings.copy(
+                                streak = settings.streak + 1
+                            )
+                        )
+                    }
+                }
             }
 
             loadTasks()

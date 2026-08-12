@@ -47,23 +47,85 @@ class TaskRepository(
 
     suspend fun resetRecurringTasks() {
 
+        println("RESET RUNNING")
+
         val tasks =
             taskDao.getAllTasksIncludingArchived()
 
         tasks.forEach { task ->
 
+            // RECURRING TASKS
+
             if (
-                task.taskType == TaskType.RECURRING.name &&
-                task.completed &&
-                System.currentTimeMillis() >= task.nextDueDate
+                task.taskType == TaskType.RECURRING.name
             ) {
 
-                taskDao.updateTask(
-                    task.copy(
-                        completed = false,
-                        archived = false
+                if (
+                    task.completed &&
+                    System.currentTimeMillis() < task.nextDueDate
+                ) {
+
+                    taskDao.updateTask(
+                        task.copy(
+                            archived = true
+                        )
                     )
-                )
+                }
+
+                if (
+                    task.completed &&
+                    System.currentTimeMillis() >= task.nextDueDate
+                ) {
+
+                    taskDao.updateTask(
+                        task.copy(
+                            completed = false,
+                            archived = false
+                        )
+                    )
+                }
+            }
+
+            // HABITS
+
+            if (
+                task.taskType == TaskType.HABIT.name &&
+                task.completed
+            ) {
+
+                val oneDay =
+                    24L * 60L * 60L * 1000L
+
+                if (
+                    System.currentTimeMillis() >=
+                    task.lastCompletedAt + oneDay
+                ) {
+
+                    taskDao.updateTask(
+                        task.copy(
+                            completed = false
+                        )
+                    )
+                }
+            }
+
+            // ONE-TIME TASKS
+
+            if (
+                task.taskType == TaskType.ONE_TIME.name &&
+                task.completed
+            ) {
+
+                val oneDay =
+                    24L * 60L * 60L * 1000L
+
+                if (
+                    System.currentTimeMillis() >=
+                    task.lastCompletedAt + oneDay
+                ) {
+
+                    taskDao.deleteTask(task)
+                }
             }
         }
     }
@@ -72,8 +134,11 @@ class TaskRepository(
         task: TaskEntity
     ): Boolean {
 
-        if (task.taskType != TaskType.RECURRING.name)
+        if (
+            task.taskType != TaskType.RECURRING.name
+        ) {
             return true
+        }
 
         return System.currentTimeMillis() >= task.nextDueDate
     }
