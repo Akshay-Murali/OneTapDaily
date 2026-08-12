@@ -38,6 +38,7 @@ fun TasksScreen() {
     }
 
     val tasks by viewModel.tasks.collectAsState()
+    val streak by viewModel.streak.collectAsState()
 
     var showAddDialog by remember {
         mutableStateOf(false)
@@ -69,11 +70,6 @@ fun TasksScreen() {
         else
             (completedCount * 100) / totalCount
 
-    val streak =
-        if (progressPercent == 100 && totalCount > 0)
-            1
-        else
-            0
 
     Column(
         modifier = Modifier
